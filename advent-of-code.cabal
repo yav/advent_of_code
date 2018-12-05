@@ -1,0 +1,19 @@
+-- This is only so we keep track of the library we depend on.
+
+name:                advent-of-code
+version:             0.1.0.0
+-- synopsis:
+-- description:
+license:             ISC
+license-file:        LICENSE
+author:              Iavor Diatchki
+maintainer:          iavor.diatchki@gmail.com
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+cabal-version:       >=1.10
+
+library
+  build-depends:       base >=4.12 && <4.13, containers
+  default-language:    Haskell2010
