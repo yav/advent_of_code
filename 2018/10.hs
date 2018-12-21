@@ -5,7 +5,7 @@ import Text.Read(readMaybe)
 import Data.Maybe(mapMaybe)
 import Data.Char(isDigit)
 import Data.Function(on)
-import Data.List(sortBy,groupBy)
+import Data.List(sortBy,groupBy,sort)
 
 main :: IO ()
 main =
@@ -20,8 +20,9 @@ part1 inp =
          ssteps = map bboxSize steps `zip` steps
          pairs = zip ssteps (tail ssteps)
          ok ((s1,_),(s2,_)) = s2 < s1
-         bs = dropWhile ok pairs
-         x = snd $ fst $ head bs
+         (as,bs) = span ok pairs
+         x = snd $ fst $ bs !! 0
+     print (length as)
      drawPts x
 
 
@@ -44,20 +45,33 @@ bboxSize vps = (x2 - x1) * (y2 - y1)
   where
   ((x1,y1),(x2,y2)) = bbox vps
 
-drawPts :: [VPoint] -> IO()
-drawPts ps = do _ <- foldM drawRow (y1-1) rows
+drawPts :: [VPoint] -> IO ()
+drawPts ps = putStrLn $ unlines $ drawRows y1 rows
+{-
+do _ <- foldM drawRow (y1-1) rows
                 return ()
+-}
   where
   ((x1,y1),_) = bbox ps
-
-  drawRow l xs = do _ <- foldM drawPt (x1 - 1) (map fst xs)
-                    let y = snd (head xs)
-                    replicateM_ (y - l) (putStrLn "")
+{-
+  drawRow l xs = do let y = snd (head xs)
+                    replicateM_ (y - l - 1) (putStrLn "")
+                    _ <- foldM drawPt (x1 - 1) (map fst xs)
+                    putStrLn ""
                     return y
+-}
+  drawRows p xs = case xs of
+                    [] -> []
+                    a : as | p < y -> "" : drawRows (p+1) xs
+                           | p == y -> drawRow x1 (map fst a) : drawRows (y+1) as
+                        where y = snd (head a)
 
-  drawPt l x = do putStr (replicate (x - l - 1) ' ')
-                  putChar '#'
-                  return x
+  drawRow :: Int -> [Int] -> String
+  drawRow p xs = case xs of
+                   [] -> ""
+                   a : as | p < a -> ' ' : drawRow (p+1) xs
+                          | p == a -> '#' : drawRow (a+1) as
+                          | p > a -> drawRow p as
 
   rows = map (sortBy (compare `on` fst))
        $ groupBy ((==) `on` snd)
