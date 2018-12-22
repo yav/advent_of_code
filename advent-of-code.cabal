@@ -15,6 +15,6 @@ extra-source-files:  CHANGELOG.md
 cabal-version:       >=1.10
 
 library
-  build-depends:       base >=4.12 && <4.13, containers
+  build-depends:       base >=4.12 && <4.13, containers, pretty-show
   default-language:    Haskell2010
 
