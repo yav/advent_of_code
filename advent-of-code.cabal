@@ -14,7 +14,13 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 cabal-version:       >=1.10
 
-library
-  build-depends:       base >=4.12 && <4.13, containers, pretty-show
+
+executable a19
+  build-depends:       base >=4.12 && <4.15, containers, pretty-show, vector,
+                       filepath
+  hs-source-dirs:      2019
+  main-is:             Main.hs
+  other-modules:       P01,
+                       P02
   default-language:    Haskell2010
 
