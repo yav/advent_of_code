@@ -20,7 +20,9 @@ executable a19
                        filepath
   hs-source-dirs:      2019
   main-is:             Main.hs
-  other-modules:       P01,
-                       P02
+  other-modules:       Utils,
+                       P01,
+                       P02,
+                       P03
   default-language:    Haskell2010
 
