@@ -19,4 +19,12 @@ part2 mem opts =
     [] -> print "No solution found"
 
 
+runWithInput :: Mem -> Int -> Int -> IO Int
+runWithInput template x y =
+  do mem <- cloneMem template
+     writeMem mem (Addr 1) x
+     writeMem mem (Addr 2) y
+     runProgram mem (Addr 0)
+     readMem mem (Addr 0)
+
 
