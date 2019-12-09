@@ -21,6 +21,7 @@ executable a19
   hs-source-dirs:      2019
   main-is:             Main.hs
   other-modules:       Utils,
+                       VM,
                        P01,
                        P02,
                        P03
