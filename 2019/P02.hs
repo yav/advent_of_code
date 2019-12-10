@@ -1,6 +1,5 @@
 module P02 where
 
-import qualified Data.Vector.Mutable as Vector
 import VM
 
 main :: String -> IO ()

@@ -10,12 +10,12 @@ main txt =
      prog <- parseProgram txt
 
      vm1 <- newVM prog
-     forkIO (runProgram vm1)
+     _ <- forkIO (runProgram vm1)
      writeChan (vmIn vm1) 1
      drain vm1
 
      vm2 <- newVM prog
-     forkIO (runProgram vm2)
+     _ <- forkIO (runProgram vm2)
      writeChan (vmIn vm2) 5
      drain vm2
 

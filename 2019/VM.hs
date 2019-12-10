@@ -6,12 +6,13 @@ import Data.Vector.Mutable (IOVector)
 import qualified Data.Vector as Vector
 import qualified Data.Vector.Mutable as Vector
 import Control.Monad(zipWithM_)
-import Control.Concurrent.Chan
+import Control.Concurrent
 
-data VM = VM { vmMem :: Mem
-             , vmIn  :: Chan Value
-             , vmOut :: Chan Value
-             , vmName :: String
+data VM = VM { vmMem  :: Mem
+             , vmIn   :: Chan Value
+             , vmOut  :: Chan Value
+             , vmName :: Int
+             , vmDone :: MVar ()  -- gets filled in when finished
              }
 
 type Mem      = IOVector Value
@@ -55,7 +56,11 @@ readArg vm addr mode =
     Position  -> readIndirect vm addr
 
 debug :: VM -> String -> IO ()
-debug vm x = if True then pure () else putStrLn ("[" ++ vmName vm ++ "] " ++ x)
+debug vm x
+  | dbg       = putStrLn ("[" ++ show (vmName vm) ++ "] " ++ x)
+  | otherwise = pure ()
+  where
+  dbg = False
 
 --------------------------------------------------------------------------------
 
@@ -78,7 +83,8 @@ newVM mem =
   do i <- newChan
      o <- newChan
      m <- Vector.clone mem
-     pure VM { vmIn = i, vmOut = o, vmMem = m, vmName = "vm" }
+     d <- newEmptyMVar
+     pure VM { vmIn = i, vmOut = o, vmMem = m, vmDone = d, vmName = 0 }
 
 runProgramFrom :: VM -> Addr -> IO ()
 runProgramFrom vm pc =
@@ -124,7 +130,8 @@ doInstruction vm pc =
                      pure (Just (pc .+ 4))
 
      case instr of
-       99 -> pure Nothing
+       99 -> do putMVar (vmDone vm) ()
+                pure Nothing
        01 -> bin (+)
        02 -> bin (*)
        03 -> do debug vm "Getting"
