@@ -1,5 +1,6 @@
 module P02 where
 
+import qualified Data.Vector.Mutable as Vector
 import VM
 
 main :: String -> IO ()
@@ -21,10 +22,10 @@ part2 mem opts =
 
 runWithInput :: Mem -> Int -> Int -> IO Int
 runWithInput template x y =
-  do mem <- cloneMem template
-     writeMem mem (Addr 1) x
-     writeMem mem (Addr 2) y
-     runProgram mem (Addr 0)
-     readMem mem (Addr 0)
+  do vm <- newVM template
+     writeMem vm (Addr 1) x
+     writeMem vm (Addr 2) y
+     runProgram vm
+     readMem vm (Addr 0)
 
 

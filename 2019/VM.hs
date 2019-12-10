@@ -6,37 +6,56 @@ import Data.Vector.Mutable (IOVector)
 import qualified Data.Vector as Vector
 import qualified Data.Vector.Mutable as Vector
 import Control.Monad(zipWithM_)
+import Control.Concurrent.Chan
+
+data VM = VM { vmMem :: Mem
+             , vmIn  :: Chan Value
+             , vmOut :: Chan Value
+             , vmName :: String
+             }
 
 type Mem      = IOVector Value
 newtype Addr  = Addr Int
 type Value    = Int
+data Mode     = Position | Immediate
 
 (.+) :: Addr -> Int -> Addr
 Addr x .+ y = Addr (x + y)
 
-readMem :: Mem -> Addr -> IO Value
-readMem mem (Addr a) = Vector.read mem a
+readMem :: VM -> Addr -> IO Value
+readMem vm (Addr a) = Vector.read (vmMem vm) a
 
-writeMem :: Mem -> Addr -> Value -> IO ()
-writeMem mem (Addr a) v = Vector.write mem a v
+writeMem :: VM -> Addr -> Value -> IO ()
+writeMem vm (Addr a) v = Vector.write (vmMem vm) a v
 
-ptr :: Mem -> Addr -> IO Addr
-ptr mem a = Addr <$> readMem mem a
+ptr :: VM -> Addr -> IO Addr
+ptr vm a = Addr <$> readMem vm a
 
-readIndirect :: Mem -> Addr -> IO Value
-readIndirect mem a = readMem mem =<< ptr mem a
+readIndirect :: VM -> Addr -> IO Value
+readIndirect vm a = readMem vm =<< ptr vm a
 
-writeIndirect :: Mem -> Addr -> Value -> IO ()
-writeIndirect mem a v =
-  do addr <- ptr mem a
-     writeMem mem addr v
+writeIndirect :: VM -> Addr -> Value -> IO ()
+writeIndirect vm a v =
+  do addr <- ptr vm a
+     writeMem vm addr v
 
+dumpMem :: VM -> IO ()
+dumpMem vm = print =<< Vector.freeze (vmMem vm)
 
-dumpMem :: Mem -> IO ()
-dumpMem mem = print =<< Vector.freeze mem
+readIn :: VM -> IO Value
+readIn vm = readChan (vmIn vm)
 
-cloneMem :: Mem -> IO Mem
-cloneMem = Vector.clone
+writeOut :: VM -> Value -> IO ()
+writeOut vm v = writeChan (vmOut vm) v
+
+readArg :: VM -> Addr -> Mode -> IO Value
+readArg vm addr mode =
+  case mode of
+    Immediate -> readMem vm addr
+    Position  -> readIndirect vm addr
+
+debug :: VM -> String -> IO ()
+debug vm x = if True then pure () else putStrLn ("[" ++ vmName vm ++ "] " ++ x)
 
 --------------------------------------------------------------------------------
 
@@ -54,20 +73,31 @@ parseProgram inp =
 
 --------------------------------------------------------------------------------
 
+newVM :: Mem -> IO VM
+newVM mem =
+  do i <- newChan
+     o <- newChan
+     m <- Vector.clone mem
+     pure VM { vmIn = i, vmOut = o, vmMem = m, vmName = "vm" }
 
-runProgram :: Mem -> Addr -> IO ()
-runProgram mem pc =
-  do mb <- doInstruction mem pc
+runProgramFrom :: VM -> Addr -> IO ()
+runProgramFrom vm pc =
+  do mb <- doInstruction vm pc
      case mb of
        Nothing  -> pure ()
-       Just pc1 -> runProgram mem pc1
+       Just pc1 -> runProgramFrom vm pc1
+
+
+
+runProgram :: VM -> IO ()
+runProgram vm = runProgramFrom vm (Addr 0)
 
 test :: String -> IO ()
 test inp =
-  do mem <- parseProgram inp
-     dumpMem mem
-     runProgram mem (Addr 0)
-     dumpMem mem
+  do vm <- newVM =<< parseProgram inp
+     dumpMem vm
+     runProgram vm
+     dumpMem vm
 
 
 
@@ -75,18 +105,49 @@ test inp =
 
 
 
-doInstruction :: Mem -> Addr -> IO (Maybe Addr)
-doInstruction mem pc =
-  do opcode <- readMem mem pc
-     case opcode of
+doInstruction :: VM -> Addr -> IO (Maybe Addr)
+doInstruction vm pc =
+  do opcode <- readMem vm pc
+     let getMode arg =
+           case mod (div opcode (10 ^ (2 + arg))) 10 of
+             0 -> Position
+             1 -> Immediate
+             it -> error ("Unknown mode for operand " ++ show arg ++
+                                                 ": " ++ show it)
+
+         instr    = mod opcode 100
+         getArg i = readArg vm (pc .+ (i+1)) (getMode i)
+
+         bin op = do x <- getArg 0
+                     y <- getArg 1
+                     writeIndirect vm (pc .+ 3) (op x y)
+                     pure (Just (pc .+ 4))
+
+     case instr of
        99 -> pure Nothing
        01 -> bin (+)
        02 -> bin (*)
+       03 -> do debug vm "Getting"
+                i <- readIn vm
+                debug vm ("Got: "  ++ show i)
+                writeIndirect vm (pc .+ 1) i
+                pure (Just (pc .+ 2))
+       04 -> do debug vm "Sending"
+                writeOut vm =<< getArg 0
+                pure (Just (pc .+ 2))
+       05 -> do v   <- getArg 0
+                tgt <- getArg 1
+                pure (Just $ if v == 0 then pc .+ 3 else Addr tgt)
+       06 -> do v   <- getArg 0
+                tgt <- getArg 1
+                pure (Just $ if v == 0 then Addr tgt else pc .+ 3)
+       07 -> bin (\x y -> if x <  y then 1 else 0)
+       08 -> bin (\x y -> if x == y then 1 else 0)
+
+
        _  -> fail ("Invalid opcode " ++ show opcode)
-  where
-  bin op = do x <- readIndirect mem (pc .+ 1)
-              y <- readIndirect mem (pc .+ 2)
-              writeIndirect mem (pc .+ 3) (op x y)
-              pure (Just (pc .+ 4))
+
+
+
 
 
