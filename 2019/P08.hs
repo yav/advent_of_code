@@ -9,6 +9,7 @@ main txt =
   do putStrLn "Problem 08"
      let input = parseInput 25 6 txt
      print (part1 input)
+     putStrLn (render input)
 
 type Layer = [String]
 
@@ -36,4 +37,17 @@ part1 = mul . minimumBy (comparing zeros) . map countImg
                                  '1' -> P3 d0 (d1+1) d2
                                  '2' -> P3 d0 d1 (d2+1)
                                  _   -> s
+
+combine :: Char -> Char -> Char
+combine front back =
+  case front of
+    '0' -> ' '
+    '1' -> '*'
+    _   -> back
+
+render :: [Layer] -> String
+render = unlines . map renderRow . transpose
+  where
+  renderRow = map (foldr combine ' ') . transpose
+
 

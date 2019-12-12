@@ -4,7 +4,7 @@ module P07 where
 import Data.List
 import Control.Concurrent
 import Control.Monad
-import qualified Data.Vector.Mutable as Vector
+import Data.IORef
 
 import VM
 
@@ -49,9 +49,11 @@ startPhase isRec mem vs =
   mkVM o (n,v) =
     do i <- newChan
        writeChan i v
-       m <- Vector.clone mem
+       m <- cloneMem mem
        d <- newEmptyMVar
-       let vm = VM { vmName = n, vmMem = m, vmIn = i, vmOut = o, vmDone = d }
+       b <- newIORef 0
+       let vm = VM { vmName = n, vmMem = m, vmIn = i, vmOut = o, vmDone = d
+                   , vmBase = b }
        _ <- forkIO (runProgram vm)
        pure vm
 

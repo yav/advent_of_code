@@ -10,7 +10,7 @@ main txt =
      part2 mem [ (noun,verb) | noun <- [ 0 .. 99 ], verb <- [ 0 .. 99 ] ]
 
 
-part2 :: Mem -> [(Int,Int)] -> IO ()
+part2 :: Mem -> [(Value,Value)] -> IO ()
 part2 mem opts =
   case opts of
     (noun,verb) : more ->
@@ -19,12 +19,12 @@ part2 mem opts =
     [] -> print "No solution found"
 
 
-runWithInput :: Mem -> Int -> Int -> IO Int
+runWithInput :: Mem -> Value -> Value -> IO Value
 runWithInput template x y =
   do vm <- newVM template
-     writeMem vm (Addr 1) x
-     writeMem vm (Addr 2) y
+     writeMem vm (addr 1) x
+     writeMem vm (addr 2) y
      runProgram vm
-     readMem vm (Addr 0)
+     readMem vm (addr 0)
 
 
