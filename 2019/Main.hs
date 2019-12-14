@@ -13,6 +13,7 @@ import qualified P07
 import qualified P08
 import qualified P09
 import qualified P10
+import qualified P11
 
 main :: IO ()
 main =
@@ -31,6 +32,7 @@ main =
                "08" -> P08.main txt
                "09" -> P09.main txt
                "10" -> P10.main txt
+               "11" -> P11.main txt
                _   -> putStrLn ("I don't know how to solve problem " ++ show f)
 
        _   -> putStrLn "Need a problem number"

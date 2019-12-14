@@ -8,14 +8,10 @@ main txt =
   do putStrLn "Problem 5"
      prog <- parseProgram txt
 
-     vm1 <- newVM prog
-     _ <- forkIO (runProgram vm1)
-     writeChan (vmIn vm1) 1
-     drain vm1
+     vm1 <- newVM prog (pure 1) print
+     runProgram vm1
 
-     vm2 <- newVM prog
-     _ <- forkIO (runProgram vm2)
-     writeChan (vmIn vm2) 5
-     drain vm2
+     vm2 <- newVM prog (pure 5) print
+     runProgram vm2
 
 

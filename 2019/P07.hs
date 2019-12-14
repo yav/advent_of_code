@@ -37,13 +37,13 @@ startPhase :: Bool -> Mem -> [Value] -> IO Value
 startPhase isRec mem vs =
   do let init1 : rest = reverse (zip [ 0 .. ] vs)
 
-     rec outChan <- if isRec then pure (vmIn firstVM) else newChan
-         lastVM  <- mkVM outChan init1
-         firstVM <- foldM (mkVM . vmIn) lastVM rest
+     rec outChan <- if isRec then pure firstIn else newChan
+         ~lastVM <- mkVM outChan init1
+         ~(_,firstIn) <- foldM (mkVM . snd) lastVM rest
 
-     writeChan (vmIn firstVM) 0
-     takeMVar (vmDone lastVM)
-     readChan (vmOut lastVM)
+     writeChan firstIn 0
+     takeMVar (vmDone (fst lastVM))
+     readChan outChan
 
   where
   mkVM o (n,v) =
@@ -52,10 +52,12 @@ startPhase isRec mem vs =
        m <- cloneMem mem
        d <- newEmptyMVar
        b <- newIORef 0
-       let vm = VM { vmName = n, vmMem = m, vmIn = i, vmOut = o, vmDone = d
+       let g = readChan i
+           p = writeChan o
+       let vm = VM { vmName = n, vmMem = m, vmGet = g, vmPut = p, vmDone = d
                    , vmBase = b }
        _ <- forkIO (runProgram vm)
-       pure vm
+       pure (vm,i)
 
 
 

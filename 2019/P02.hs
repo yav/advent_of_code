@@ -21,7 +21,7 @@ part2 mem opts =
 
 runWithInput :: Mem -> Value -> Value -> IO Value
 runWithInput template x y =
-  do vm <- newVM template
+  do vm <- newVM template (pure 0) print
      writeMem vm (addr 1) x
      writeMem vm (addr 2) y
      runProgram vm

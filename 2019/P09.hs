@@ -1,7 +1,5 @@
 module P09 where
 
-import Control.Concurrent
-
 import VM
 
 main :: String -> IO ()
@@ -9,15 +7,8 @@ main txt =
   do putStrLn "Problem 09"
      mem <- parseProgram txt
 
-     vm  <- newVM mem
-     writeChan (vmIn vm) 1
-     runProgram vm
-     drain vm
-
-     vm2  <- newVM mem
-     writeChan (vmIn vm2) 2
-     runProgram vm2
-     drain vm2
+     runProgram =<< newVM mem (pure 1) print
+     runProgram =<< newVM mem (pure 2) print
 
 
 

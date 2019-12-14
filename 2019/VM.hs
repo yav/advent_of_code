@@ -11,15 +11,16 @@ import qualified Data.Map as Map
 import Data.IORef
 import Control.Monad(zipWithM_,forM_)
 import Control.Concurrent
-import Control.Exception
 
 data VM = VM { vmMem  :: Mem
              , vmBase :: IORef Value
-             , vmIn   :: Chan Value
-             , vmOut  :: Chan Value
+             , vmGet  :: IO Value
+             , vmPut  :: Value -> IO ()
              , vmName :: Int
              , vmDone :: MVar ()  -- gets filled in when finished
              }
+
+
 
 pageSize :: Int
 pageSize = 4096
@@ -92,12 +93,6 @@ writeIndirect vm a v =
   do x <- ptr vm a
      writeMem vm x v
 
-readIn :: VM -> IO Value
-readIn vm = readChan (vmIn vm)
-
-writeOut :: VM -> Value -> IO ()
-writeOut vm v = writeChan (vmOut vm) v
-
 readArg :: VM -> Addr -> Mode -> IO Value
 readArg vm a mode =
   case mode of
@@ -123,12 +118,6 @@ debug vm x
   where
   dbg = False
 
-drain :: VM -> IO ()
-drain vm = do mb <- try (readChan (vmOut vm))
-              case mb of
-                Left BlockedIndefinitelyOnMVar -> pure ()
-                Right a -> print a >> drain vm
-
 
 --------------------------------------------------------------------------------
 
@@ -146,14 +135,12 @@ parseProgram inp =
 
 --------------------------------------------------------------------------------
 
-newVM :: Mem -> IO VM
-newVM mem =
-  do i <- newChan
-     o <- newChan
-     m <- cloneMem mem
+newVM :: Mem -> IO Value -> (Value -> IO ()) -> IO VM
+newVM mem g p =
+  do m <- cloneMem mem
      d <- newEmptyMVar
      b <- newIORef 0
-     pure VM { vmIn = i, vmOut = o, vmMem = m, vmDone = d, vmName = 0
+     pure VM { vmGet = g, vmPut = p, vmMem = m, vmDone = d, vmName = 0
              , vmBase = b }
 
 runProgramFrom :: VM -> Addr -> IO ()
@@ -167,13 +154,6 @@ runProgramFrom vm pc =
 
 runProgram :: VM -> IO ()
 runProgram vm = runProgramFrom vm (Addr 0)
-
-test :: String -> IO ()
-test inp =
-  do vm <- newVM =<< parseProgram inp
-     dumpMem vm
-     runProgram vm
-     dumpMem vm
 
 
 
@@ -205,12 +185,12 @@ doInstruction vm pc =
        01 -> bin (+)
        02 -> bin (*)
        03 -> do debug vm "Getting"
-                i <- readIn vm
+                i <- vmGet vm
                 debug vm ("Got: "  ++ show i)
                 resultIn 0 i
                 pure (Just (pc .+ 2))
        04 -> do debug vm "Sending"
-                writeOut vm =<< getArg 0
+                vmPut vm =<< getArg 0
                 pure (Just (pc .+ 2))
        05 -> do v   <- getArg 0
                 tgt <- getArg 1
