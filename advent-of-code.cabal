@@ -41,7 +41,7 @@ executable a20
                        filepath
   hs-source-dirs:      2020
   main-is:             Main.hs
-  other-modules:       P01, P02, P03, P04
+  other-modules:       P01, P02, P03, P04, P05
   ghc-options: -Wall
   extensions:          BlockArguments, RecordWildCards, NamedFieldPuns,
                        ParallelListComp
